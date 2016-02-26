@@ -10,10 +10,23 @@ public class Main {
 
     public static void main(String[] args) throws Exception {
 
-        MultiLabelInstances multiLabelInstances = new MultiLabelInstances(
-                "gamegenres-7-mdmr10pct.arff", "gamegenres-7-mdmr10pct.xml");
+        String[] datasets = {
+//                "enron",
+                "scene",
+                "yeast",
+        };
 
-        runEvaluations(multiLabelInstances, new LIFT());
+        for (String dataset : datasets) {
+            System.out.println("====================");
+            System.out.println(dataset);
+            System.out.println();
+
+            MultiLabelInstances multiLabelInstances = new MultiLabelInstances(
+                    "datasets/" + dataset + ".arff",
+                    "datasets/" + dataset + ".xml");
+
+            runEvaluations(multiLabelInstances, new LIFT());
+        }
 
     }
 
