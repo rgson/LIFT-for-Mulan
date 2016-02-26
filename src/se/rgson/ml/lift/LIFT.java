@@ -6,7 +6,10 @@ import mulan.data.MultiLabelInstances;
 import sun.reflect.generics.reflectiveObjects.NotImplementedException;
 import weka.classifiers.Classifier;
 import weka.classifiers.functions.SMO;
+import weka.clusterers.SimpleKMeans;
+import weka.core.DistanceFunction;
 import weka.core.Instance;
+import weka.core.Instances;
 import weka.core.TechnicalInformation;
 
 /**
@@ -93,6 +96,37 @@ public class LIFT extends TransformationBasedMultiLabelLearner {
     @Override
     public String toString() {
         return String.format("LIFT(r=%f, classifier=%s)", this.r, this.baseClassifier.getClass().getCanonicalName());
+    }
+
+
+    // =========================================================================
+    // private class KMeansClusterer
+    // =========================================================================
+
+    /**
+     * K-means clustering algorithm for label-specific feature selection.
+     * The actual clustering is handled by the SimpleKMeans superclass.
+     */
+    private class KMeansClusterer extends SimpleKMeans {
+
+        /**
+         * Gets the distance from an instance to each of the cluster centroids.
+         * @param instance The instance.
+         * @return The distance from the instance to each of the centroids.
+         */
+        public double[] getDistances(Instance instance) {
+            int numClusters = super.getNumClusters();
+            Instances clusterCentroids = super.getClusterCentroids();
+            DistanceFunction distanceFunction = super.getDistanceFunction();
+
+            double[] distances = new double[numClusters];
+            for (int i = 0; i < numClusters; i++) {
+                distances[i] = distanceFunction.distance(instance, clusterCentroids.instance(i));
+            }
+
+            return distances;
+        }
+
     }
 
 }
