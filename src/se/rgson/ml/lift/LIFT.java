@@ -11,6 +11,8 @@ import weka.clusterers.SimpleKMeans;
 import weka.core.*;
 
 import java.util.ArrayList;
+import java.util.Enumeration;
+import java.util.List;
 import java.util.function.Function;
 
 /**
@@ -220,7 +222,7 @@ public class LIFT extends TransformationBasedMultiLabelLearner {
         for (int i = 0; i < dimensionality - 1; i++) {
             attributes.add(new Attribute("attribute_" + i));
         }
-        attributes.add(original.classAttribute());
+        attributes.add(copyNominalAttribute(original.classAttribute()));
 
         // Create the instance set.
         Instances labelSpecific = new Instances("", attributes, original.numInstances());
@@ -230,6 +232,20 @@ public class LIFT extends TransformationBasedMultiLabelLearner {
                 .forEach(labelSpecific::add);
 
         return labelSpecific;
+    }
+
+    /**
+     * Creates a copy of a nominal attribute with the same name and values.
+     * @param attribute A nominal attribute.
+     * @return A new nominal attribute with the same name and values.
+     */
+    private Attribute copyNominalAttribute(Attribute attribute) {
+        List<String> nominalValues = new ArrayList<>(attribute.numValues());
+        Enumeration originalValues = attribute.enumerateValues();
+        while (originalValues.hasMoreElements()) {
+            nominalValues.add((String) originalValues.nextElement());
+        }
+        return new Attribute(attribute.name(), nominalValues);
     }
 
 
