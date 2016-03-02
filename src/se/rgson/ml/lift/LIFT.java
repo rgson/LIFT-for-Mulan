@@ -53,6 +53,11 @@ public class LIFT extends TransformationBasedMultiLabelLearner {
     private Classifier[] classifiers;
 
     /**
+     * The label-specific dataset for each label.
+     */
+    private Instances[] datasets;
+
+    /**
      * Constructs an instance of LIFT using a clustering ratio of 0.1 and
      * weka.classifiers.functions.SMO as the base classifier.
      */
@@ -92,6 +97,7 @@ public class LIFT extends TransformationBasedMultiLabelLearner {
         this.brTransformation = new BinaryRelevanceTransformation(multiLabelInstances);
         this.mapping = new InstanceMappingFunction[this.numLabels];
         this.classifiers = new Classifier[this.numLabels];
+        this.datasets = new Instances[this.numLabels];
         Instances[] instancesByLabel = doBRTransformation(multiLabelInstances);
 
         for (int label = 0; label < this.numLabels; label++) {
@@ -111,11 +117,11 @@ public class LIFT extends TransformationBasedMultiLabelLearner {
             this.mapping[label] = new InstanceMappingFunction(posClustering, negClustering);
 
             // Form B_k according to Eq.(4);
-            Instances labelSpecificDataset = createLabelSpecificDataset(instances, this.mapping[label]);
+            this.datasets[label] = createLabelSpecificDataset(instances, this.mapping[label]);
 
             // Induce g_k by invoking L on B_k, i.e. g_k <- L(B_k);
             this.classifiers[label] = AbstractClassifier.makeCopy(this.baseClassifier);
-            this.classifiers[label].buildClassifier(labelSpecificDataset);
+            this.classifiers[label].buildClassifier(this.datasets[label]);
         }
     }
 
@@ -127,6 +133,7 @@ public class LIFT extends TransformationBasedMultiLabelLearner {
         for (int label = 0; label < numLabels; label++) {
             Instance transformedInstance = this.brTransformation.transformInstance(instance, label);
             transformedInstance = this.mapping[label].apply(transformedInstance);
+            transformedInstance.setDataset(this.datasets[label]);
 
             double distribution[] = this.classifiers[label].distributionForInstance(transformedInstance);
             int maxIndex = (distribution[0] > distribution[1]) ? 0 : 1;
