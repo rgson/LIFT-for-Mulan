@@ -45,10 +45,10 @@ public class LIFT extends TransformationBasedMultiLabelLearner {
      * Maps from an original instance to an instance using the label-specific
      * features, based on the performed clustering.
      */
-    private InstanceMappingFunction[] mapping;
+    private InstanceMappingFunction[] mappings;
 
     /**
-     * The trained classifiers for each label.
+     * The trained classifier for each label.
      */
     private Classifier[] classifiers;
 
@@ -95,7 +95,7 @@ public class LIFT extends TransformationBasedMultiLabelLearner {
     @Override
     protected void buildInternal(MultiLabelInstances multiLabelInstances) throws Exception {
         this.brTransformation = new BinaryRelevanceTransformation(multiLabelInstances);
-        this.mapping = new InstanceMappingFunction[this.numLabels];
+        this.mappings = new InstanceMappingFunction[this.numLabels];
         this.classifiers = new Classifier[this.numLabels];
         this.datasets = new Instances[this.numLabels];
         Instances[] instancesByLabel = doBRTransformation(multiLabelInstances);
@@ -114,10 +114,10 @@ public class LIFT extends TransformationBasedMultiLabelLearner {
             KMeans negClustering = new KMeans(negInstances, numClusters);
 
             // Create the mapping phi_k for l_k according to Eq.(3);
-            this.mapping[label] = new InstanceMappingFunction(posClustering, negClustering);
+            this.mappings[label] = new InstanceMappingFunction(posClustering, negClustering);
 
             // Form B_k according to Eq.(4);
-            this.datasets[label] = createLabelSpecificDataset(instances, this.mapping[label]);
+            this.datasets[label] = createLabelSpecificDataset(instances, this.mappings[label]);
 
             // Induce g_k by invoking L on B_k, i.e. g_k <- L(B_k);
             this.classifiers[label] = AbstractClassifier.makeCopy(this.baseClassifier);
@@ -132,7 +132,7 @@ public class LIFT extends TransformationBasedMultiLabelLearner {
 
         for (int label = 0; label < numLabels; label++) {
             Instance transformedInstance = this.brTransformation.transformInstance(instance, label);
-            transformedInstance = this.mapping[label].apply(transformedInstance);
+            transformedInstance = this.mappings[label].apply(transformedInstance);
             transformedInstance.setDataset(this.datasets[label]);
 
             double distribution[] = this.classifiers[label].distributionForInstance(transformedInstance);
