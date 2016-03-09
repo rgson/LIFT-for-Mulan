@@ -35,6 +35,12 @@ public class LIFT extends TransformationBasedMultiLabelLearner {
     private final float r;
 
     /**
+     * The distance function. Used for constructing the label-specific
+     * features from cluster centroids.
+     */
+    private final DistanceFunction distanceFunction;
+
+    /**
      * The Binary Relevance transformation used to turn the multi-label
      * instances into binary classification instances.
      */
@@ -90,6 +96,7 @@ public class LIFT extends TransformationBasedMultiLabelLearner {
     public LIFT(float clusteringRatio, Classifier baseClassifier) {
         super(baseClassifier);
         this.r = clusteringRatio;
+        this.distanceFunction = new EuclideanDistance();
     }
 
     @Override
@@ -109,12 +116,25 @@ public class LIFT extends TransformationBasedMultiLabelLearner {
 
             // Perform k-means clustering on P_k and N_k, each with m_k clusters
             // as defined in Eq.(2);
-            int numClusters = (int) Math.ceil(this.r * Math.min(posInstances.numInstances(), negInstances.numInstances()));
-            KMeans posClustering = new KMeans(posInstances, numClusters);
-            KMeans negClustering = new KMeans(negInstances, numClusters);
+            int numClusters = Math.min(
+                    (int) Math.ceil(this.r * posInstances.numInstances()),
+                    (int) Math.ceil(this.r * negInstances.numInstances()));
+
+            ClusterCentroids clusterCentroids;
+            if (numClusters == 0) {
+                // NOTE: The algorithm definition in [1] does not specify how the case of (m_k == 0) should be handled.
+                // For this, the MATLAB implementation by Zhang [2] has been used as the reference implementation.
+                // [2] http://cse.seu.edu.cn/PersonalPage/zhangml/files/LIFT.rar
+                clusterCentroids = getClusterCentroids(instances, Math.min(50, instances.numInstances()));
+            }
+            else {
+                ClusterCentroids posClusterCentroids = getClusterCentroids(posInstances, numClusters);
+                ClusterCentroids negClusterCentroids = getClusterCentroids(negInstances, numClusters);
+                clusterCentroids = combineClusterCentroids(posClusterCentroids, negClusterCentroids);
+            }
 
             // Create the mapping phi_k for l_k according to Eq.(3);
-            this.mappings[label] = new InstanceMappingFunction(posClustering, negClustering);
+            this.mappings[label] = new InstanceMappingFunction(clusterCentroids);
 
             // Form B_k according to Eq.(4);
             this.datasets[label] = createLabelSpecificDataset(instances, this.mappings[label]);
@@ -214,6 +234,41 @@ public class LIFT extends TransformationBasedMultiLabelLearner {
     }
 
     /**
+     * Constructs and gets the cluster centroids for a set of instances.
+     *
+     * @param instances The instances to cluster.
+     * @param numClusters The number of clusters.
+     * @return The cluster centroids.
+     */
+    private ClusterCentroids getClusterCentroids(Instances instances, int numClusters) throws Exception {
+        if (instances.numInstances() == 1) {
+            // No need to cluster if there's only a single instance.
+            return new ClusterCentroids(removeClassAttribute(instances));
+        }
+        SimpleKMeans kmeans = new SimpleKMeans();
+        kmeans.setDistanceFunction(this.distanceFunction);
+        kmeans.setNumClusters(numClusters);
+        kmeans.buildClusterer(removeClassAttribute(instances));
+        return new ClusterCentroids(kmeans.getClusterCentroids());
+    }
+
+    /**
+     * Combines two ClusterCentroid objects.
+     *
+     * @param centroids1 The first ClusterCentroids object.
+     * @param centroids2 The second ClusterCentroids object.
+     * @return The combined ClusterCentroids object with the centroids from both.
+     */
+    private ClusterCentroids combineClusterCentroids(ClusterCentroids centroids1, ClusterCentroids centroids2) {
+        ClusterCentroids clusterCentroids = new ClusterCentroids(new Instances(centroids1.centroids));
+        for (Instance centroid : centroids2.centroids) {
+            // The centroids must be added individually in order for the dataset reference to be changed correctly.
+            clusterCentroids.centroids.add(centroid);
+        }
+        return clusterCentroids;
+    }
+
+    /**
      * Creates a set of binary classification instances with label-specific
      * features. The created set of instances contains all instances from the
      * provided set of binary classification instances. The provided mapping
@@ -255,28 +310,66 @@ public class LIFT extends TransformationBasedMultiLabelLearner {
         return new Attribute(attribute.name(), nominalValues);
     }
 
+    /**
+     * Removes the class attribute from a set of instances.
+     * @param instances The set of instances.
+     * @return The set of instances with the class attribute removed.
+     */
+    private Instances removeClassAttribute(Instances instances) {
+        int classIndex = instances.classIndex();
+        if (classIndex > -1) {
+            instances = new Instances(instances);
+            instances.setClassIndex(-1);
+            instances.deleteAttributeAt(classIndex);
+        }
+        return instances;
+    }
+
+    /**
+     * Removes the class attribute from an instance.
+     * @param instance The instance.
+     * @return The instance with the class attribute removed.
+     */
+    private Instance removeClassAttribute(Instance instance) {
+        int classIndex = instance.classIndex();
+        if (classIndex > -1) {
+            instance = new DenseInstance(instance);
+            instance.deleteAttributeAt(classIndex);
+        }
+        return instance;
+    }
+
 
     // =========================================================================
     // Inner classes
     // =========================================================================
 
     /**
-     * K-means clustering algorithm for label-specific feature selection.
-     * The actual clustering is handled by the SimpleKMeans superclass.
+     * Represents the centroids of a clustering.
      */
-    private class KMeans extends SimpleKMeans {
+    private class ClusterCentroids {
 
         /**
-         * Construcs a new KMeans and builds the clusters.
-         * @param instances The instances to cluster.
-         * @param numClusters The number of clusters.
-         * @throws Exception
+         * The centroids.
          */
-        public KMeans(Instances instances, int numClusters) throws Exception {
-            Instances classless = removeClassAttribute(instances);
-            this.setDistanceFunction(new EuclideanDistance());
-            this.setNumClusters(numClusters);
-            this.buildClusterer(classless);
+        private final Instances centroids;
+
+        /**
+         * Constructs a new ClusterCentroid object from a set of centroid instances.
+         *
+         * @param centroids The centroid instnaces.
+         */
+        public ClusterCentroids(Instances centroids) {
+            this.centroids = centroids;
+        }
+
+        /**
+         * Gets the number of centroids.
+         *
+         * @return The number of centroids.
+         */
+        public int getNumClusters() {
+            return this.centroids.numInstances();
         }
 
         /**
@@ -285,46 +378,16 @@ public class LIFT extends TransformationBasedMultiLabelLearner {
          * @return The distance from the instance to each of the centroids.
          */
         public double[] getDistances(Instance instance) {
-            int numClusters = super.getNumClusters();
-            Instances clusterCentroids = super.getClusterCentroids();
-            DistanceFunction distanceFunction = super.getDistanceFunction();
-            Instance classless = removeClassAttribute(instance);
+            int numClusters = this.centroids.numInstances();
+            DistanceFunction distanceFunction = LIFT.this.distanceFunction;
+            Instance classless = LIFT.this.removeClassAttribute(instance);
 
             double[] distances = new double[numClusters];
             for (int i = 0; i < numClusters; i++) {
-                distances[i] = distanceFunction.distance(classless, clusterCentroids.instance(i));
+                distances[i] = distanceFunction.distance(classless, this.centroids.instance(i));
             }
 
             return distances;
-        }
-
-        /**
-         * Removes the class attribute from a set of instances.
-         * @param instances The set of instances.
-         * @return The set of instances with the class attribute removed.
-         */
-        private Instances removeClassAttribute(Instances instances) {
-            int classIndex = instances.classIndex();
-            if (classIndex > -1) {
-                instances = new Instances(instances);
-                instances.setClassIndex(-1);
-                instances.deleteAttributeAt(classIndex);
-            }
-            return instances;
-        }
-
-        /**
-         * Removes the class attribute from an instance.
-         * @param instance The instance.
-         * @return The instance with the class attribute removed.
-         */
-        private Instance removeClassAttribute(Instance instance) {
-            int classIndex = instance.classIndex();
-            if (classIndex > -1) {
-                instance = new DenseInstance(instance);
-                instance.deleteAttributeAt(classIndex);
-            }
-            return instance;
         }
 
     }
@@ -336,14 +399,9 @@ public class LIFT extends TransformationBasedMultiLabelLearner {
     private final class InstanceMappingFunction implements Function<Instance, Instance> {
 
         /**
-         * The clusters of positive instances.
+         * The clusters centroids.
          */
-        private final KMeans positives;
-
-        /**
-         * The clusters of negative instances.
-         */
-        private final KMeans negatives;
+        private final ClusterCentroids centroids;
 
         /**
          * The dimensionality of the resulting instances, including the class
@@ -353,15 +411,11 @@ public class LIFT extends TransformationBasedMultiLabelLearner {
 
         /**
          * Constructs a new InstanceMappingFunction.
-         * @param positives The clustering of positive instances.
-         * @param negatives The clustering of negative instances.
+         * @param centroids The cluster centroids.
          */
-        public InstanceMappingFunction(KMeans positives, KMeans negatives) {
-            this.positives = positives;
-            this.negatives = negatives;
-            this.dimensionality = this.positives.getNumClusters()
-                    + this.negatives.getNumClusters()
-                    + 1; // +1 for the class attribute.
+        public InstanceMappingFunction(ClusterCentroids centroids) {
+            this.centroids = centroids;
+            this.dimensionality = this.centroids.getNumClusters() + 1; // +1 for the class attribute.
         }
 
         /**
@@ -376,11 +430,9 @@ public class LIFT extends TransformationBasedMultiLabelLearner {
         @Override
         public Instance apply(Instance original) {
             double[] values = new double[this.dimensionality];
-            double[] positiveDistances = this.positives.getDistances(original);
-            double[] negativeDistances = this.negatives.getDistances(original);
+            double[] distances = this.centroids.getDistances(original);
 
-            System.arraycopy(positiveDistances, 0, values, 0, positiveDistances.length);
-            System.arraycopy(negativeDistances, 0, values, positiveDistances.length, negativeDistances.length);
+            System.arraycopy(distances, 0, values, 0, distances.length);
             values[values.length - 1] = original.value(original.classAttribute());
 
             Instance result = new DenseInstance(values.length);
