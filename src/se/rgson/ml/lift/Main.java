@@ -10,23 +10,18 @@ public class Main {
 
     public static void main(String[] args) throws Exception {
 
-        String[] datasets = {
-//                "enron",
-                "scene",
-                "yeast",
-        };
+        final String DATASET = "scene";
 
-        for (String dataset : datasets) {
-            System.out.println("====================");
-            System.out.println(dataset);
-            System.out.println();
+        long time = System.currentTimeMillis();
 
-            MultiLabelInstances multiLabelInstances = new MultiLabelInstances(
-                    "datasets/" + dataset + ".arff",
-                    "datasets/" + dataset + ".xml");
+        MultiLabelInstances multiLabelInstances = new MultiLabelInstances(
+                "datasets/" + DATASET + ".arff",
+                "datasets/" + DATASET + ".xml");
 
-            runEvaluations(multiLabelInstances, new LIFT());
-        }
+        runEvaluations(multiLabelInstances, new LIFT());
+
+        float seconds = (System.currentTimeMillis() - time) / 1000;
+        System.out.printf("Finished evaluation for dataset '%s' in %f.2 seconds.\n", DATASET, seconds);
 
     }
 
