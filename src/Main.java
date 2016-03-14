@@ -1,10 +1,9 @@
-package se.rgson.ml.lift;
-
 import mulan.classifier.MultiLabelLearner;
 import mulan.data.MultiLabelInstances;
 import mulan.evaluation.Evaluator;
 import mulan.evaluation.MultipleEvaluation;
 import mulan.evaluation.measure.*;
+import se.rgson.ml.LIFT;
 
 public class Main {
 

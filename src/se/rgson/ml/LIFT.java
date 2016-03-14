@@ -1,4 +1,4 @@
-package se.rgson.ml.lift;
+package se.rgson.ml;
 
 import mulan.classifier.MultiLabelOutput;
 import mulan.classifier.transformation.TransformationBasedMultiLabelLearner;
@@ -17,9 +17,9 @@ import java.util.function.Function;
 
 /**
  * An implementation of the LIFT algorithm.
- *
+ * <p>
  * Based on the description by Zhang and Wu [1].
- *
+ * <p>
  * [1] M. L. Zhang and L. Wu, "Lift: Multi-Label Learning with Label-Specific
  * Features," in IEEE Transactions on Pattern Analysis and Machine Intelligence,
  * vol. 37, no. 1, pp. 107-120, Jan. 1 2015. doi: 10.1109/TPAMI.2014.2339815
@@ -74,6 +74,7 @@ public class LIFT extends TransformationBasedMultiLabelLearner {
     /**
      * Constructs an instance of LIFT using weka.classifiers.functions.SMO as
      * the base classifier.
+     *
      * @param clusteringRatio The clustering ratio, in the range of [0, 1].
      */
     public LIFT(float clusteringRatio) {
@@ -82,6 +83,7 @@ public class LIFT extends TransformationBasedMultiLabelLearner {
 
     /**
      * Constructs an instance of LIFT using a clustering ratio of 0.1.
+     *
      * @param baseClassifier The binary classifier to use for each label.
      */
     public LIFT(Classifier baseClassifier) {
@@ -90,8 +92,9 @@ public class LIFT extends TransformationBasedMultiLabelLearner {
 
     /**
      * Constructs an instance of LIFT.
+     *
      * @param clusteringRatio The clustering ratio, in the range of [0, 1].
-     * @param baseClassifier The binary classifier to use for each label.
+     * @param baseClassifier  The binary classifier to use for each label.
      */
     public LIFT(float clusteringRatio, Classifier baseClassifier) {
         super(baseClassifier);
@@ -126,8 +129,7 @@ public class LIFT extends TransformationBasedMultiLabelLearner {
                 // For this, the MATLAB implementation by Zhang [2] has been used as the reference implementation.
                 // [2] http://cse.seu.edu.cn/PersonalPage/zhangml/files/LIFT.rar
                 clusterCentroids = getClusterCentroids(instances, Math.min(50, instances.numInstances()));
-            }
-            else {
+            } else {
                 ClusterCentroids posClusterCentroids = getClusterCentroids(posInstances, numClusters);
                 ClusterCentroids negClusterCentroids = getClusterCentroids(negInstances, numClusters);
                 clusterCentroids = combineClusterCentroids(posClusterCentroids, negClusterCentroids);
@@ -168,15 +170,15 @@ public class LIFT extends TransformationBasedMultiLabelLearner {
     @Override
     public TechnicalInformation getTechnicalInformation() {
         TechnicalInformation info = new TechnicalInformation(TechnicalInformation.Type.ARTICLE);
-        info.setValue(TechnicalInformation.Field.AUTHOR , "M. L. Zhang and L. Wu");
-        info.setValue(TechnicalInformation.Field.ISSN   , "0162-8828");
+        info.setValue(TechnicalInformation.Field.AUTHOR, "M. L. Zhang and L. Wu");
+        info.setValue(TechnicalInformation.Field.ISSN, "0162-8828");
         info.setValue(TechnicalInformation.Field.JOURNAL, "IEEE Transactions on Pattern Analysis and Machine Intelligence");
-        info.setValue(TechnicalInformation.Field.MONTH  , "1");
-        info.setValue(TechnicalInformation.Field.NUMBER , "1");
-        info.setValue(TechnicalInformation.Field.PAGES  , "107-120");
-        info.setValue(TechnicalInformation.Field.TITLE  , "Lift: Multi-Label Learning with Label-Specific Features");
-        info.setValue(TechnicalInformation.Field.VOLUME , "37");
-        info.setValue(TechnicalInformation.Field.YEAR   , "2015");
+        info.setValue(TechnicalInformation.Field.MONTH, "1");
+        info.setValue(TechnicalInformation.Field.NUMBER, "1");
+        info.setValue(TechnicalInformation.Field.PAGES, "107-120");
+        info.setValue(TechnicalInformation.Field.TITLE, "Lift: Multi-Label Learning with Label-Specific Features");
+        info.setValue(TechnicalInformation.Field.VOLUME, "37");
+        info.setValue(TechnicalInformation.Field.YEAR, "2015");
         return info;
     }
 
@@ -189,6 +191,7 @@ public class LIFT extends TransformationBasedMultiLabelLearner {
      * Splits the multi-label classification instances into binary
      * classification instance for each label using the Binary Relevance
      * transformation.
+     *
      * @param multiLabelInstances The multi-label classification instances.
      * @return The binary classification instances for each label.
      */
@@ -202,6 +205,7 @@ public class LIFT extends TransformationBasedMultiLabelLearner {
 
     /**
      * Gets the positive instances from a binary classification instance set.
+     *
      * @param instances The full set of instances.
      * @return The positive instances.
      */
@@ -211,6 +215,7 @@ public class LIFT extends TransformationBasedMultiLabelLearner {
 
     /**
      * Gets the negative instances from a binary classification instance set.
+     *
      * @param instances The full set of binary classification instances.
      * @return The negative instances.
      */
@@ -220,9 +225,10 @@ public class LIFT extends TransformationBasedMultiLabelLearner {
 
     /**
      * Gets the instances with a specific value for the given attribute.
+     *
      * @param instances The full set of binary classification instances.
      * @param attribute The attribute to filter by.
-     * @param value The value to filter by.
+     * @param value     The value to filter by.
      * @return The instances with a specific value for the given attribute.
      */
     private Instances filterByAttributeValue(Instances instances, Attribute attribute, double value) {
@@ -236,7 +242,7 @@ public class LIFT extends TransformationBasedMultiLabelLearner {
     /**
      * Constructs and gets the cluster centroids for a set of instances.
      *
-     * @param instances The instances to cluster.
+     * @param instances   The instances to cluster.
      * @param numClusters The number of clusters.
      * @return The cluster centroids.
      */
@@ -273,7 +279,8 @@ public class LIFT extends TransformationBasedMultiLabelLearner {
      * features. The created set of instances contains all instances from the
      * provided set of binary classification instances. The provided mapping
      * function is used for transforming instances to the new feature space.
-     * @param original A set of binary classification instances.
+     *
+     * @param original        A set of binary classification instances.
      * @param instanceMapping The mapping function to use for transformation.
      * @return The created set of binary classification instances.
      */
@@ -298,6 +305,7 @@ public class LIFT extends TransformationBasedMultiLabelLearner {
 
     /**
      * Creates a copy of a nominal attribute with the same name and values.
+     *
      * @param attribute A nominal attribute.
      * @return A new nominal attribute with the same name and values.
      */
@@ -312,6 +320,7 @@ public class LIFT extends TransformationBasedMultiLabelLearner {
 
     /**
      * Removes the class attribute from a set of instances.
+     *
      * @param instances The set of instances.
      * @return The set of instances with the class attribute removed.
      */
@@ -327,6 +336,7 @@ public class LIFT extends TransformationBasedMultiLabelLearner {
 
     /**
      * Removes the class attribute from an instance.
+     *
      * @param instance The instance.
      * @return The instance with the class attribute removed.
      */
@@ -374,6 +384,7 @@ public class LIFT extends TransformationBasedMultiLabelLearner {
 
         /**
          * Gets the distance from an instance to each of the cluster centroids.
+         *
          * @param instance The instance.
          * @return The distance from the instance to each of the centroids.
          */
@@ -411,6 +422,7 @@ public class LIFT extends TransformationBasedMultiLabelLearner {
 
         /**
          * Constructs a new InstanceMappingFunction.
+         *
          * @param centroids The cluster centroids.
          */
         public InstanceMappingFunction(ClusterCentroids centroids) {
@@ -421,6 +433,7 @@ public class LIFT extends TransformationBasedMultiLabelLearner {
         /**
          * Gets the dimensionality of the resulting instances, including the
          * class attribute.
+         *
          * @return The dimensionality of the resulting instances.
          */
         public int getDimensionality() {

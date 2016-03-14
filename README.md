@@ -13,6 +13,6 @@ Developed during the "PA2537 Research Methodology" course at BTH.
 
 ## Usage
 
-The `se.rgson.ml.lift.LIFT` class contains the LIFT implementation. It offers configurability of the internal binary classifier and the clustering ratio parameter.
+The `se.rgson.ml.LIFT` class contains the LIFT implementation. It offers configurability of the internal binary classifier and the clustering ratio parameter.
 
-By convention, LIFT is used with LibSVM. To use LibSVM with Weka, the LibSVM JAR must also be included. Refer to [the Weka wiki](https://weka.wikispaces.com/LibSVM) for details.
+By convention, LIFT is used with LibSVM. To use LibSVM, the LibSVM JAR-file must also be included in the class path. Refer to the [Weka wiki](https://weka.wikispaces.com/LibSVM) for details.
